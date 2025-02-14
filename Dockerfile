@@ -39,4 +39,4 @@ COPY . .
 EXPOSE 8000
 
 # Run Gunicorn using virtual environment
-CMD ["gunicorn", "main:app"]
+CMD ["gunicorn", "--timeout", "300", "main:app"]
