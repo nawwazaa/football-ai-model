@@ -39,4 +39,4 @@ COPY . .
 EXPOSE 8000
 
 # Run Gunicorn using virtual environment
-CMD ["gunicorn", "--timeout", "600", "--workers", "1", "--worker-class", "gevent", "--worker-connections", "100", "main:app"]
+CMD ["gunicorn", "--timeout", "6000", "--workers", "1", "--worker-class", "gevent", "--worker-connections", "100", "main:app"]
