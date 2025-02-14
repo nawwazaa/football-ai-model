@@ -7,8 +7,12 @@ import cv2
 from ultralytics import YOLO
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
-
+CORS(
+    app,
+    resources={r"/*": {"origins": "*"}},
+    allow_headers=["Content-Type", "Accept"],
+    methods=["GET", "POST", "OPTIONS"]
+)
 
 # Cloudinary Configuration
 cloudinary.config(
@@ -60,31 +64,35 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    print("enter in predict")
     if 'file' not in request.files:
         return jsonify({"error": "No video file received"}), 400
-
+    print("file is present")
     # Save video file
     video_file = request.files['file']
     video_file.save(INPUT_VIDEO)
-
+    print("input video has been saved")
     try:
         # Process the video
         annotated_video_path = process_video(INPUT_VIDEO, model)
         print("Annotated video created:", annotated_video_path)
 
         if not os.path.exists(annotated_video_path):
+            print("anotated video has not found")
             return jsonify({"error": "Annotated file not found."}), 500
 
         # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(annotated_video_path, resource_type="video")
         cloudinary_url = upload_result.get("public_id")
-
+        print("cloudinary on uploaded")
         if not cloudinary_url:
+            print("error in clodinary")
             return jsonify({"error": "Upload failed"}), 500
-
+        print("welldone")
         return jsonify({"videoUrl": cloudinary_url})
 
     except Exception as e:
+        print("idk what error")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
