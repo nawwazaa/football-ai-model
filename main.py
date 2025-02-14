@@ -9,9 +9,7 @@ from ultralytics import YOLO
 app = Flask(__name__)
 CORS(
     app,
-    resources={r"/*": {"origins": "*"}},
-    allow_headers=["Content-Type", "Accept"],
-    methods=["GET", "POST", "OPTIONS"]
+    origins="*"
 )
 
 # Cloudinary Configuration
