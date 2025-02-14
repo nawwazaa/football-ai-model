@@ -1,23 +1,42 @@
-# Use the official Python 3.10.12 image as the base image
+# Use official Python 3.10.12 image
 FROM python:3.10.12-slim
 
 # Set environment variables
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Create and set the working directory
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    gcc \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create working directory
 WORKDIR /app
 
-# Copy the requirements file into the container
-COPY requirements.txt /app/
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Install dependencies
-RUN python -m venv /opt/venv && \
-    . /opt/venv/bin/activate && \
-    pip install --upgrade pip && \
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --extra-index-url https://download.pytorch.org/whl/cpu torch torchaudio torchvision && \
     pip install -r requirements.txt
 
-# Copy the rest of the application code into the container
-COPY . /app/
+# Copy application files
+COPY . .
 
-# Set the entry point for the container
-CMD ["/opt/venv/bin/python", "main.py"]
+# Expose port
+EXPOSE 8000
+
+# Run Gunicorn using virtual environment
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--timeout", "600", "main:app"]
