@@ -32,48 +32,49 @@ def load_yolo_model(model_path):
 
 model = load_yolo_model(MODEL_PATH)
 
-# Process Video Function
 def process_video(video_path, model):
     try:
         cap = cv2.VideoCapture(video_path)
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        # Add these optimizations
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        frame_skip = 3  # Process every 4th frame
+        frame_size = (640, 480)  # Reduced resolution
+        
+        # Get video properties
         fps = int(cap.get(cv2.CAP_PROP_FPS))
-        output_path = ANNOTATED_VIDEO
-
-        # Optimize video processing
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer size
-        frame_skip = 2  # Process every 3rd frame to reduce workload
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        out = cv2.VideoWriter(ANNOTATED_VIDEO, fourcc, fps, frame_size)
 
         frame_count = 0
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
                 break
-
+                
             frame_count += 1
             if frame_count % frame_skip != 0:
                 continue
-
-            # Resize frame for faster processing
-            frame = cv2.resize(frame, (640, 640))
-
-            # Run inference
+                
+            # Resize frame to reduce memory usage
+            frame = cv2.resize(frame, frame_size)
+            
+            # Process frame
             results = model(frame, verbose=False)
             annotated_frame = results[0].plot()
             out.write(annotated_frame)
 
+            # Explicitly clean up memory
+            del frame
+            del annotated_frame
+            del results
+            gc.collect()
+
         cap.release()
         out.release()
-        cv2.destroyAllWindows()
-
-        return output_path
+        return ANNOTATED_VIDEO
 
     except Exception as e:
-        print(f"Error processing video: {str(e)}")
+        print(f"Video processing failed: {str(e)}")
         raise
 
 @app.route("/")
@@ -82,6 +83,19 @@ def index():
 
 @app.route("/predict", methods=["POST"])
 def predict():
+    MAX_SIZE_MB = 50  # 50MB limit
+    
+    if 'file' not in request.files:
+        return jsonify({"error": "No video file received"}), 400
+
+    video_file = request.files['file']
+    video_file.seek(0, os.SEEK_END)
+    file_size = video_file.tell()
+    video_file.seek(0)
+    
+    if file_size > MAX_SIZE_MB * 1024 * 1024:
+        return jsonify({"error": f"Video exceeds {MAX_SIZE_MB}MB limit"}), 400
+        
     print("Entered /predict endpoint")
     if 'file' not in request.files:
         return jsonify({"error": "No video file received"}), 400
