@@ -4,12 +4,9 @@ import cloudinary.uploader
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
-import numpy as np
 from ultralytics import YOLO
 import gc
-import traceback
 
-# Initialize Flask app
 app = Flask(__name__)
 CORS(app, origins="*")
 
@@ -26,24 +23,13 @@ MODEL_PATH = "best.pt"  # Ensure this file exists in your project folder
 INPUT_VIDEO = "input_video.mp4"
 ANNOTATED_VIDEO = "annotated_video.mp4"
 
-# Force CPU mode and optimize settings
-from ultralytics import settings
-settings.update({'tensorrt': False, 'cuda': False})
-
 # Load YOLO Model
 def load_yolo_model(model_path):
-    try:
-        print(f"Loading YOLO model from {model_path}...")
-        model = YOLO(model_path)
-        # Verify model is working
-        model.predict(np.zeros((640, 640, 3), dtype=np.uint8), verbose=False)
-        print("Model loaded successfully!")
-        return model
-    except Exception as e:
-        print(f"Model loading failed: {str(e)}")
-        raise
+    print(f"Loading YOLO model from {model_path}...")
+    model = YOLO(model_path)
+    print("Model loaded successfully!")
+    return model
 
-# Load the model
 model = load_yolo_model(MODEL_PATH)
 
 # Process Video Function
@@ -55,9 +41,9 @@ def process_video(video_path, model):
         fps = int(cap.get(cv2.CAP_PROP_FPS))
         output_path = ANNOTATED_VIDEO
 
-        # Optimize video capture
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        frame_skip = 2  # Process every 3rd frame
+        # Optimize video processing
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer size
+        frame_skip = 2  # Process every 3rd frame to reduce workload
 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
@@ -90,7 +76,6 @@ def process_video(video_path, model):
         print(f"Error processing video: {str(e)}")
         raise
 
-# Routes
 @app.route("/")
 def index():
     return jsonify({"message": "YOLO API is running!"})
@@ -116,7 +101,7 @@ def predict():
 
         # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(annotated_video_path, resource_type="video")
-        cloudinary_url = upload_result.get("secure_url")
+        cloudinary_url = upload_result.get("secure_url")  # Use secure_url instead of public_id
         print("Video uploaded to Cloudinary:", cloudinary_url)
 
         if not cloudinary_url:
@@ -135,12 +120,10 @@ def predict():
 
     except Exception as e:
         print(f"Error in /predict: {str(e)}")
-        traceback.print_exc()
         return jsonify({
             "error": "Video processing failed",
             "details": str(e)
         }), 500
 
-# Run the app
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
