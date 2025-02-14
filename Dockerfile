@@ -20,4 +20,4 @@ RUN python -m venv /opt/venv && \
 COPY . /app/
 
 # Set the entry point for the container
-CMD ["/opt/venv/bin/python", "your_main_script.py"]
+CMD ["/opt/venv/bin/python", "main.py"]
