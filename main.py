@@ -115,7 +115,7 @@ def predict():
 
         # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(annotated_video_path, resource_type="video")
-        cloudinary_url = upload_result.get("secure_url")  # Use secure_url instead of public_id
+        cloudinary_url = upload_result.get("public_id") 
         print("Video uploaded to Cloudinary:", cloudinary_url)
 
         if not cloudinary_url:
