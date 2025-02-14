@@ -7,7 +7,14 @@ import cv2
 from ultralytics import YOLO
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/predict": {
+        "origins": ["http://localhost:3000", "https://www.sapredictpalai.com"],
+        "methods": ["POST"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True  # <- Important if sending credentials
+    }
+})
 
 # Cloudinary Configuration
 cloudinary.config(
